@@ -16,7 +16,12 @@ from SpykeTorch import utils
 from torchvision import transforms
 
 
-class S1Transform:
+use_cuda = True
+
+max_epoch = 800
+
+
+class S1C1Transform:
     def __init__(self, filter, timesteps = 5):
         self.to_tensor = transforms.ToTensor()
         self.filter = filter
@@ -33,10 +38,14 @@ class S1Transform:
         temporal_image = self.temporal_transform(image)
         return temporal_image.sign().byte()
 
-kernels = [ utils.DoGKernel(7,1,2),
-            utils.DoGKernel(7,2,1),]
-filter = utils.Filter(kernels, padding = 3, thresholds = 50)
-s1 = S1Transform(filter)
+kernels = [ utils.DoGKernel(3,3/9,6/9),
+            utils.DoGKernel(3,6/9,3/9),
+            utils.DoGKernel(7,7/9,14/9),
+            utils.DoGKernel(7,14/9,7/9),
+            utils.DoGKernel(13,13/9,26/9),
+            utils.DoGKernel(13,26/9,13/9)]
+filter = utils.Filter(kernels, padding = 6, thresholds = 50)
+s1 = S1C1Transform(filter)
 
 
 
@@ -46,12 +55,19 @@ MNIST_test = utils.CacheDataset(torchvision.datasets.MNIST(root=data_root, train
 trainset = DataLoader(MNIST_train, batch_size=len(MNIST_train), shuffle=True)
 testset= DataLoader(MNIST_test, batch_size=len(MNIST_test), shuffle=True)
 
-use_cuda = True
+# # functions to show an image
+# def imshow(img):
+#     npimg = img.numpy()
+#     plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
+    
+# # get some images
+# dataiter = iter(dataloader)
+# images = dataiter.next()
+#plt.imshow(np.transpose(images[0].cpu().detach().numpy(), (1, 2, 0)))
 
 
-max_epoch = 400
-
-mozafari = ViT(2, 3, 10, (15,15), 50, (0.004, -0.003), (-0.004, 0.0005), 0.3)
+mozafari = ViT(6, 30, 10, (15,15),  360, (0.01, -0.0035), (-0.01, 0.0006), 0.4)
 
 
 
@@ -142,26 +158,3 @@ for epoch in range(max_epoch):
     anp_adapt = anp * (perf_train[0] * adaptive_int + adaptive_min)
     mozafari.update_learning_rates(apr_adapt, anr_adapt, app_adapt, anp_adapt)
     
-# Features #
-feature = torch.tensor([
-    [
-        [1]
-    ]
-    ]).float()
-if use_cuda:
-    feature = feature.cuda()
-
-cstride = (1,1)
-
-# S1 Features #
-if use_cuda:
-    feature,cstride = vis.get_deep_feature(feature, cstride, (filter.max_window_size, filter.max_window_size), (1,1), filter.kernels.cuda())
-else:
-    feature,cstride = vis.get_deep_feature(feature, cstride, (filter.max_window_size, filter.max_window_size), (1,1), filter.kernels)
-# C1 Features #
-feature,cstride = vis.get_deep_feature(feature, cstride, (s1.pooling_size, s1.pooling_size), (s1.pooling_stride, s1.pooling_stride))
-# S2 Features #
-feature,cstride = vis.get_deep_feature(feature, cstride, mozafari.kernel_size, (1,1), mozafari.s2.weight)
-
-for i in range(mozafari.number_of_features):
-    vis.plot_tensor_in_image('feature_s2_'+str(i).zfill(4)+'.png',feature[i])

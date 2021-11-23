@@ -34,12 +34,12 @@ class SepConv2d(torch.nn.Module):
                  dilation=1,):
         super(SepConv2d, self).__init__()
 
-        self.conv1 = snn.Convolution(30, 30, 5, 0.8, 0.05)
+        self.conv1 = snn.Convolution(300, 300, 5, 0.8, 0.05)
         self.conv1_t = 10
         self.k1 = 1
         self.r1 = 2
 
-        self.conv2 = snn.Convolution(30, 30, 2, 0.8, 0.05)
+        self.conv2 = snn.Convolution(300, 300, 2, 0.8, 0.05)
         self.conv2_t = 1
         self.k2 = 1
         self.r2 = 1
@@ -65,7 +65,7 @@ class SepConv2d(torch.nn.Module):
             spk, pot = sf.fire(pot, self.conv1_t, True)
             
             self.spk_cnt1 += 1
-            if self.spk_cnt1 >= 500:
+            if self.spk_cnt1 >= 1000:
 
                 self.spk_cnt1 = 0
                 ap = torch.tensor(self.stdp1.learning_rate[0][0].item(), device=self.stdp1.learning_rate[0][0].device) * 2
@@ -214,7 +214,7 @@ class Transformer(nn.Module):
 
 class ViT(nn.Module):
     def __init__(self, input_channels, features_per_class, number_of_classes,s2_kernel_size,
-               threshold, stdp_lr, anti_stdp_lr,dropout=0.5, image_size=28, dim=30, kernels=[7], strides=[4],
+               threshold, stdp_lr, anti_stdp_lr,dropout=0.5, image_size=28, dim=300, kernels=[7], strides=[4],
                  heads=[1] , depth = [1], pool='cls', emb_dropout=0.5, scale_dim=4):
         super(ViT, self).__init__()
         self.features_per_class = features_per_class
